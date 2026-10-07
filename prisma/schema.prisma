@@ -1,0 +1,88 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String                @id @default(uuid())
+  email            String                @unique
+  passwordHash     String
+  displayName      String
+  role             String               @default("USER")
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  favorites        Favorite[]
+  ratings          Rating[]
+  reports          InconsistencyReport[]
+  submittedToilets Toilet[]              @relation("UserSubmissions")
+}
+
+model Toilet {
+  id                     String         @id
+  name                   String
+  address                String
+  postalCode             String
+  locationDetails        String?
+  latitude               Float
+  longitude              Float
+  isWheelchairAccessible Boolean        @default(false)
+  isOpen247              Boolean        @default(false)
+  feeHuf                 Int            @default(0)
+  openingHours           String?
+  operator               String?
+  status                 String         @default("PENDING_REVIEW")
+  submittedByUserId      String?
+  submittedBy            User?          @relation("UserSubmissions", fields: [submittedByUserId], references: [id])
+  reviewedAt             DateTime?
+  rejectionReason        String?
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+  favorites              Favorite[]
+  ratings                Rating[]
+  reports                InconsistencyReport[]
+  @@index([latitude, longitude])
+  @@index([status, feeHuf, isWheelchairAccessible])
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  userId    String
+  toiletId  String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  toilet    Toilet   @relation(fields: [toiletId], references: [id], onDelete: Cascade)
+  @@unique([userId, toiletId])
+}
+
+model Rating {
+  id        String   @id @default(uuid())
+  userId    String
+  toiletId  String
+  score     Int
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  toilet    Toilet   @relation(fields: [toiletId], references: [id], onDelete: Cascade)
+  @@unique([userId, toiletId])
+}
+
+model InconsistencyReport {
+  id                String       @id @default(uuid())
+  userId            String
+  toiletId          String
+  reportType        String
+  description       String
+  suggestedValue    String?
+  status            String       @default("PENDING")
+  adminNotes        String?
+  resolvedByAdminId String?
+  createdAt         DateTime     @default(now())
+  resolvedAt        DateTime?
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  toilet            Toilet       @relation(fields: [toiletId], references: [id], onDelete: Cascade)
+}
